@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 
 	sitter "github.com/smacker/go-tree-sitter"
@@ -50,13 +51,24 @@ var supportedLanguages = map[string]*sitter.Language{
 
 func main() {
 	var (
-		lang  = flag.String("lang", "", "Language to parse (required)")
-		query = flag.String("query", "", "Tree-sitter query to execute")
+		lang          = flag.String("lang", "", "Language to parse (required)")
+		query         = flag.String("query", "", "Tree-sitter query to execute")
+		listLanguages = flag.Bool("list-languages", false, "List all supported languages")
 	)
 	flag.Parse()
 
+	// Check if we just need to list languages
+	if *listLanguages {
+		fmt.Println("Supported languages:")
+		for _, lang := range getSupportedLanguages() {
+			fmt.Println(" -", lang)
+		}
+		os.Exit(0)
+	}
+
 	if *lang == "" {
 		fmt.Fprintf(os.Stderr, "Error: --lang is required\n")
+		fmt.Fprintf(os.Stderr, "Use --list-languages to see all supported languages\n")
 		os.Exit(1)
 	}
 
@@ -211,5 +223,7 @@ func getSupportedLanguages() []string {
 	for lang := range supportedLanguages {
 		langs = append(langs, lang)
 	}
+	// Sort languages alphabetically for consistent output
+	sort.Strings(langs)
 	return langs
 }
