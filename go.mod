@@ -1,4 +1,4 @@
-module tree-sitter-debugger
+module github.com/meain/tree-sitter-debugger
 
 go 1.21
 
