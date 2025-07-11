@@ -15,9 +15,11 @@ import (
 	tree_sitter_cpp "github.com/tree-sitter/tree-sitter-cpp/bindings/go"
 	tree_sitter_css "github.com/tree-sitter/tree-sitter-css/bindings/go"
 	tree_sitter_go "github.com/tree-sitter/tree-sitter-go/bindings/go"
+	tree_sitter_haskell "github.com/tree-sitter/tree-sitter-haskell/bindings/go"
 	tree_sitter_html "github.com/tree-sitter/tree-sitter-html/bindings/go"
 	tree_sitter_java "github.com/tree-sitter/tree-sitter-java/bindings/go"
 	tree_sitter_javascript "github.com/tree-sitter/tree-sitter-javascript/bindings/go"
+	tree_sitter_julia "github.com/tree-sitter/tree-sitter-julia/bindings/go"
 	tree_sitter_php "github.com/tree-sitter/tree-sitter-php/bindings/go"
 	tree_sitter_python "github.com/tree-sitter/tree-sitter-python/bindings/go"
 	tree_sitter_ruby "github.com/tree-sitter/tree-sitter-ruby/bindings/go"
@@ -31,10 +33,14 @@ var supportedLanguages = map[string]*sitter.Language{
 	"cpp":        sitter.NewLanguage(tree_sitter_cpp.Language()),
 	"css":        sitter.NewLanguage(tree_sitter_css.Language()),
 	"go":         sitter.NewLanguage(tree_sitter_go.Language()),
+	"haskell":    sitter.NewLanguage(tree_sitter_haskell.Language()),
+	"hs":         sitter.NewLanguage(tree_sitter_haskell.Language()),
 	"html":       sitter.NewLanguage(tree_sitter_html.Language()),
 	"java":       sitter.NewLanguage(tree_sitter_java.Language()),
 	"javascript": sitter.NewLanguage(tree_sitter_javascript.Language()),
 	"js":         sitter.NewLanguage(tree_sitter_javascript.Language()),
+	"julia":      sitter.NewLanguage(tree_sitter_julia.Language()),
+	"jl":         sitter.NewLanguage(tree_sitter_julia.Language()),
 	"php":        sitter.NewLanguage(tree_sitter_php.LanguagePHP()),
 	"python":     sitter.NewLanguage(tree_sitter_python.Language()),
 	"py":         sitter.NewLanguage(tree_sitter_python.Language()),
