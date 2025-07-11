@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -10,43 +9,40 @@ import (
 	"sort"
 	"strings"
 
-	sitter "github.com/smacker/go-tree-sitter"
-	"github.com/smacker/go-tree-sitter/bash"
-	"github.com/smacker/go-tree-sitter/c"
-	"github.com/smacker/go-tree-sitter/cpp"
-	"github.com/smacker/go-tree-sitter/css"
-	"github.com/smacker/go-tree-sitter/golang"
-	"github.com/smacker/go-tree-sitter/html"
-	"github.com/smacker/go-tree-sitter/java"
-	"github.com/smacker/go-tree-sitter/php"
-	"github.com/smacker/go-tree-sitter/python"
-	"github.com/smacker/go-tree-sitter/ruby"
-	"github.com/smacker/go-tree-sitter/rust"
-	"github.com/smacker/go-tree-sitter/typescript/tsx"
-	"github.com/smacker/go-tree-sitter/typescript/typescript"
-	"github.com/smacker/go-tree-sitter/yaml"
+	sitter "github.com/tree-sitter/go-tree-sitter"
+	tree_sitter_bash "github.com/tree-sitter/tree-sitter-bash/bindings/go"
+	tree_sitter_c "github.com/tree-sitter/tree-sitter-c/bindings/go"
+	tree_sitter_cpp "github.com/tree-sitter/tree-sitter-cpp/bindings/go"
+	tree_sitter_css "github.com/tree-sitter/tree-sitter-css/bindings/go"
+	tree_sitter_go "github.com/tree-sitter/tree-sitter-go/bindings/go"
+	tree_sitter_html "github.com/tree-sitter/tree-sitter-html/bindings/go"
+	tree_sitter_java "github.com/tree-sitter/tree-sitter-java/bindings/go"
+	tree_sitter_javascript "github.com/tree-sitter/tree-sitter-javascript/bindings/go"
+	tree_sitter_php "github.com/tree-sitter/tree-sitter-php/bindings/go"
+	tree_sitter_python "github.com/tree-sitter/tree-sitter-python/bindings/go"
+	tree_sitter_ruby "github.com/tree-sitter/tree-sitter-ruby/bindings/go"
+	tree_sitter_rust "github.com/tree-sitter/tree-sitter-rust/bindings/go"
+	tree_sitter_typescript "github.com/tree-sitter/tree-sitter-typescript/bindings/go"
 )
 
 var supportedLanguages = map[string]*sitter.Language{
-	"bash":       bash.GetLanguage(),
-	"c":          c.GetLanguage(),
-	"cpp":        cpp.GetLanguage(),
-	"css":        css.GetLanguage(),
-	"go":         golang.GetLanguage(),
-	"html":       html.GetLanguage(),
-	"java":       java.GetLanguage(),
-	"javascript": typescript.GetLanguage(),
-	"js":         typescript.GetLanguage(),
-	"php":        php.GetLanguage(),
-	"python":     python.GetLanguage(),
-	"py":         python.GetLanguage(),
-	"ruby":       ruby.GetLanguage(),
-	"rust":       rust.GetLanguage(),
-	"tsx":        tsx.GetLanguage(),
-	"typescript": typescript.GetLanguage(),
-	"ts":         typescript.GetLanguage(),
-	"yaml":       yaml.GetLanguage(),
-	"yml":        yaml.GetLanguage(),
+	"bash":       sitter.NewLanguage(tree_sitter_bash.Language()),
+	"c":          sitter.NewLanguage(tree_sitter_c.Language()),
+	"cpp":        sitter.NewLanguage(tree_sitter_cpp.Language()),
+	"css":        sitter.NewLanguage(tree_sitter_css.Language()),
+	"go":         sitter.NewLanguage(tree_sitter_go.Language()),
+	"html":       sitter.NewLanguage(tree_sitter_html.Language()),
+	"java":       sitter.NewLanguage(tree_sitter_java.Language()),
+	"javascript": sitter.NewLanguage(tree_sitter_javascript.Language()),
+	"js":         sitter.NewLanguage(tree_sitter_javascript.Language()),
+	"php":        sitter.NewLanguage(tree_sitter_php.LanguagePHP()),
+	"python":     sitter.NewLanguage(tree_sitter_python.Language()),
+	"py":         sitter.NewLanguage(tree_sitter_python.Language()),
+	"ruby":       sitter.NewLanguage(tree_sitter_ruby.Language()),
+	"rust":       sitter.NewLanguage(tree_sitter_rust.Language()),
+	"typescript": sitter.NewLanguage(tree_sitter_typescript.LanguageTypescript()),
+	"ts":         sitter.NewLanguage(tree_sitter_typescript.LanguageTypescript()),
+	"tsx":        sitter.NewLanguage(tree_sitter_typescript.LanguageTSX()),
 }
 
 func main() {
@@ -101,13 +97,10 @@ func main() {
 
 	// Parse the code
 	parser := sitter.NewParser()
+	defer parser.Close()
 	parser.SetLanguage(language)
 
-	tree, err := parser.ParseCtx(context.Background(), nil, input)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing code: %v\n", err)
-		os.Exit(1)
-	}
+	tree := parser.Parse(input, nil)
 	defer tree.Close()
 
 	if *query != "" {
@@ -128,7 +121,7 @@ func executeQuery(
 	source []byte,
 	queryStr string,
 ) error {
-	q, err := sitter.NewQuery([]byte(queryStr), language)
+	q, err := sitter.NewQuery(language, queryStr)
 	if err != nil {
 		return fmt.Errorf("invalid query: %v", err)
 	}
@@ -137,12 +130,12 @@ func executeQuery(
 	qc := sitter.NewQueryCursor()
 	defer qc.Close()
 
-	qc.Exec(q, tree.RootNode())
+	matches := qc.Matches(q, tree.RootNode(), source)
 
 	matchCount := 0
 	for {
-		m, ok := qc.NextMatch()
-		if !ok {
+		match := matches.Next()
+		if match == nil {
 			break
 		}
 
@@ -151,12 +144,12 @@ func executeQuery(
 			fmt.Println()
 		}
 
-		for _, c := range m.Captures {
-			captureName := q.CaptureNameForId(c.Index)
-			node := c.Node
+		for _, capture := range match.Captures {
+			captureName := q.CaptureNames()[capture.Index]
+			node := capture.Node
 
-			startPoint := node.StartPoint()
-			endPoint := node.EndPoint()
+			startPoint := node.StartPosition()
+			endPoint := node.EndPosition()
 
 			fmt.Printf("@%s\n", captureName)
 			fmt.Printf("start: %d:%d\n", startPoint.Row+1, startPoint.Column)
@@ -184,7 +177,7 @@ func executeQuery(
 
 func printTree(node *sitter.Node, source []byte, depth int) {
 	indent := strings.Repeat("  ", depth)
-	nodeType := node.Type()
+	nodeType := node.Kind()
 
 	if node.IsNamed() {
 		if node.ChildCount() == 0 {
@@ -208,7 +201,7 @@ func printTree(node *sitter.Node, source []byte, depth int) {
 		fmt.Printf("%s\"%s\"\n", indent, displayContent)
 	}
 
-	for i := 0; i < int(node.ChildCount()); i++ {
+	for i := uint(0); i < node.ChildCount(); i++ {
 		child := node.Child(i)
 		printTree(child, source, depth+1)
 	}
